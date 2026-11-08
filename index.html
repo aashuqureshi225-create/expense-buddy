@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Expense Buddy</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#182230;--muted:#687588;--green:#167d55;--pale:#e5f5ed;--line:#e7ecf2;--red:#c43e4d;--blue:#3c65c9}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink)}
+header{padding-top:max(15px,env(safe-area-inset-top))!important;background:#fff;border-bottom:1px solid var(--line);padding:15px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:2}
+.brand{font-size:21px;font-weight:800;letter-spacing:-.5px}.brand span{color:var(--green)}.tag{font-size:12px;color:var(--muted)}
+.wrap{max-width:1100px;margin:22px auto;padding:0 16px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+h1{font-size:25px;margin:0 0 3px}h2{font-size:17px;margin:0 0 14px}.muted{color:var(--muted);font-size:13px}
+button,select,input{font:inherit}button{border:0;border-radius:10px;padding:10px 14px;background:var(--green);color:white;font-weight:650;cursor:pointer}button.secondary{background:#edf2f7;color:#253247}button.danger{background:#fff0f1;color:var(--red)}button.small{padding:6px 9px;font-size:12px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:17px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:17px;box-shadow:0 2px 8px #18223005}.metric{font-size:25px;font-weight:800;margin:8px 0 2px}.metric.green{color:var(--green)}.metric.red{color:var(--red)}
+.grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}.section{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
+.tabs{display:flex;gap:8px;margin-bottom:14px}.tabs button{background:#e9eef4;color:#526074}.tabs button.active{background:var(--green);color:#fff}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--line);font-size:13px}th{color:var(--muted);font-weight:650}td .sub{display:block;color:var(--muted);font-size:11px}.status{display:inline-block;border-radius:99px;padding:4px 8px;font-size:11px;font-weight:700}.paid{background:#e5f5ed;color:#167d55}.due{background:#fff3dc;color:#98640b}.overdue{background:#ffeaec;color:#b92e42}
+form{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:5px}input,select{border:1px solid #dce3eb;border-radius:9px;padding:10px;background:#fff;color:var(--ink);width:100%}.full{grid-column:1/-1}.form-actions{display:flex;gap:8px;grid-column:1/-1}
+.reminder{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}.reminder:last-child{border:0}.amount{font-weight:750;white-space:nowrap}
+.empty{text-align:center;color:var(--muted);padding:22px}.bar{height:8px;background:#edf1f5;border-radius:99px;overflow:hidden;margin-top:9px}.bar span{height:100%;display:block;background:var(--green);border-radius:99px}
+.note{font-size:12px;color:var(--muted);line-height:1.5;margin-top:10px}.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1c2a38;color:white;padding:11px 16px;border-radius:12px;display:none;z-index:5}
+@media(max-width:760px){.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.wrap{margin:16px auto}.metric{font-size:22px}header{padding:12px 16px}}
+@media(max-width:420px){.cards{gap:8px}.card{padding:13px}table th:nth-child(3),table td:nth-child(3){display:none}form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div><div class="brand">Expense <span>Buddy</span></div><div class="tag">Personal + Business money tracker</div></div><button id="notifyBtn" class="secondary">🔔 Enable reminders</button></header>
+<main class="wrap">
+<div class="top"><div><h1>Dashboard</h1><div class="muted" id="monthLabel"></div></div><div><button id="exportBtn" class="secondary">Export CSV</button> <button id="addBtn">＋ Add expense</button></div></div>
+<div class="cards">
+<div class="card"><div class="muted">Monthly expenses</div><div class="metric red" id="totalExpense">₹0</div><div class="muted">This month</div></div>
+<div class="card"><div class="muted">Paid</div><div class="metric green" id="totalPaid">₹0</div><div class="muted">Payments completed</div></div>
+<div class="card"><div class="muted">Pending</div><div class="metric" id="totalPending">₹0</div><div class="muted">Still to pay</div></div>
+<div class="card"><div class="muted">Budget remaining</div><div class="metric green" id="remaining">₹—</div><div class="muted" id="budgetHint">Set a monthly budget</div></div>
+</div>
+<div class="grid">
+<div>
+<section class="section"><div class="top"><h2>Expenses</h2><select id="typeFilter" style="width:auto"><option value="All">All types</option><option>Personal</option><option>Business</option></select></div>
+<div class="tabs"><button class="active" data-filter="All">All</button><button data-filter="Unpaid">Unpaid</button><button data-filter="Paid">Paid</button></div>
+<div style="overflow-x:auto"><table><thead><tr><th>Expense</th><th>Amount</th><th>Due date</th><th>Status</th><th></th></tr></thead><tbody id="expenseRows"></tbody></table></div><div id="empty" class="empty" hidden>No expenses yet. Add your first recurring bill.</div>
+</section>
+<section class="section"><h2>Monthly budget</h2><form id="budgetForm"><label class="full">Set your monthly budget (₹)<input type="number" min="0" id="budgetInput" placeholder="e.g. 25000" required></label><div class="form-actions"><button>Save budget</button></div></form><div class="bar"><span id="budgetBar" style="width:0%"></span></div><div class="note" id="budgetNote">Set a budget to track your monthly spending.</div></section>
+</div>
+<div>
+<section class="section"><h2>Upcoming & overdue</h2><div id="reminderList"></div><div class="note">Reminders are shown in this app. Allow browser notifications for alerts while the app is open. Background notifications depend on browser/device support.</div></section>
+<section class="section"><h2>Add expense / recurring bill</h2><form id="expenseForm">
+<label>Expense name<input id="name" required placeholder="e.g. Electricity bill"></label>
+<label>Amount (₹)<input id="amount" type="number" min="0.01" step="0.01" required placeholder="1500"></label>
+<label>Category<select id="category"><option>Home</option><option>Bills</option><option>EMI / Loan</option><option>Mobile / Internet</option><option>Groceries</option><option>Transport</option><option>Salary</option><option>GST / Tax</option><option>Insurance</option><option>Other</option></select></label>
+<label>Type<select id="type"><option>Personal</option><option>Business</option></select></label>
+<label>Due date<input id="date" type="date" required></label>
+<label>Repeat<select id="repeat"><option value="monthly">Every month</option><option value="weekly">Every week</option><option value="yearly">Every year</option><option value="none">One time</option></select></label>
+<label>Remind me<select id="lead"><option value="0">On due date</option><option value="1">1 day before</option><option value="3" selected>3 days before</option><option value="7">7 days before</option></select></label>
+<label>Status<select id="status"><option>Unpaid</option><option>Paid</option></select></label>
+<label class="full">Notes (optional)<input id="notes" placeholder="Any details…"></label>
+<div class="form-actions"><button type="submit">Save expense</button><button type="reset" class="secondary">Clear</button></div>
+</form></section>
+</div>
+</div>
+</main><div id="toast" class="toast"></div>
+<script>
+const KEY='expenseBuddy.v1', BUDGET='expenseBuddy.budget';
+let expenses=JSON.parse(localStorage.getItem(KEY)||'[]'), budget=Number(localStorage.getItem(BUDGET)||0), statusFilter='All';
+const $=id=>document.getElementById(id), money=n=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:2}).format(n||0);
+const today=()=>{let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+const currentMonth=()=>today().slice(0,7);
+function toast(t){$('toast').textContent=t;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',2500)}
+function save(){localStorage.setItem(KEY,JSON.stringify(expenses));localStorage.setItem(BUDGET,String(budget));render();scheduleNative()}
+function monthlyItems(){return expenses.filter(e=>e.date.slice(0,7)===currentMonth())}
+function render(){
+ $('monthLabel').textContent=new Date().toLocaleDateString(undefined,{month:'long',year:'numeric'});
+ let items=monthlyItems(), total=items.reduce((s,e)=>s+e.amount,0), paid=items.filter(e=>e.status==='Paid').reduce((s,e)=>s+e.amount,0), pending=items.filter(e=>e.status!=='Paid').reduce((s,e)=>s+e.amount,0);
+ $('totalExpense').textContent=money(total);$('totalPaid').textContent=money(paid);$('totalPending').textContent=money(pending);
+ $('remaining').textContent=budget?money(budget-total):'₹—';$('budgetHint').textContent=budget?'Monthly budget: '+money(budget):'Set a monthly budget';
+ $('budgetInput').value=budget||'';$('budgetBar').style.width=budget?Math.min(100,total/budget*100)+'%':'0%';$('budgetNote').textContent=budget?`${money(total)} used of ${money(budget)} (${Math.round(total/budget*100)}%).`:'Set a budget to track your monthly spending.';
+ let filtered=expenses.filter(e=>(statusFilter==='All'||e.status===statusFilter)&&($('typeFilter').value==='All'||e.type===$('typeFilter').value)).sort((a,b)=>a.date.localeCompare(b.date));
+ $('expenseRows').innerHTML=filtered.map(e=>`<tr><td><strong>${esc(e.name)}</strong><span class="sub">${esc(e.category)} · ${esc(e.type)}${e.repeat!=='none'?' · repeats '+e.repeat:''}</span></td><td>${money(e.amount)}</td><td>${e.date}</td><td><span class="status ${e.status==='Paid'?'paid':e.date<today()?'overdue':'due'}">${e.status==='Paid'?'Paid':e.date<today()?'Overdue':'Unpaid'}</span></td><td>${e.status!=='Paid'?`<button class="small" onclick="markPaid('${e.id}')">Paid</button>`:''} <button class="small danger" onclick="removeExpense('${e.id}')">×</button></td></tr>`).join('');
+ $('empty').hidden=filtered.length>0;
+ let future=expenses.filter(e=>e.status!=='Paid').sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6);
+ $('reminderList').innerHTML=future.length?future.map(e=>`<div class="reminder"><div><strong>${esc(e.name)}</strong><div class="muted">${e.date} · ${esc(e.type)}${e.repeat!=='none'?' · '+esc(e.repeat):''}</div></div><div class="amount">${money(e.amount)}</div></div>`).join(''):'<div class="empty">All clear — no unpaid bills 🎉</div>';
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function nextDate(d,r){let [y,m,day]=d.split('-').map(Number);let dt=new Date(y,m-1,day);
+ if(r==='weekly')dt.setDate(dt.getDate()+7);
+ else if(r==='monthly'){let t=new Date(y,m,1);let last=new Date(y,m+1,0).getDate();t.setDate(Math.min(day,last));dt=t}
+ else if(r==='yearly'){let t=new Date(y+1,m-1,1);let last=new Date(y+1,m,0).getDate();t.setDate(Math.min(day,last));dt=t}
+ else return null;
+ return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`}
+window.markPaid=id=>{let e=expenses.find(x=>x.id===id);if(e){e.status='Paid';
+ if(e.repeat&&e.repeat!=='none'){let nd=nextDate(e.date,e.repeat);if(nd&&!expenses.some(x=>x.name===e.name&&x.date===nd)){expenses.push({...e,id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),date:nd,status:'Unpaid'})}}
+ save();toast('Marked as paid.')}};
+window.removeExpense=id=>{if(confirm('Delete this expense?')){expenses=expenses.filter(e=>e.id!==id);save();toast('Expense deleted.')}};
+$('expenseForm').addEventListener('submit',e=>{e.preventDefault();let entry={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),name:$('name').value.trim(),amount:Number($('amount').value),category:$('category').value,type:$('type').value,date:$('date').value,repeat:$('repeat').value,lead:Number($('lead').value),status:$('status').value,notes:$('notes').value};if(!entry.name||entry.amount<=0||!entry.date)return;expenses.push(entry);save();e.target.reset();$('date').value=today();toast('Expense saved!')});
+$('budgetForm').addEventListener('submit',e=>{e.preventDefault();budget=Number($('budgetInput').value)||0;save();toast('Budget updated.')});
+$('typeFilter').addEventListener('change',render);
+document.querySelectorAll('[data-filter]').forEach(b=>b.addEventListener('click',()=>{statusFilter=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));render()}));
+$('addBtn').onclick=()=>{$('name').focus();window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})};
+$('exportBtn').onclick=async()=>{let rows=[['Name','Amount','Category','Type','Due date','Repeat','Status','Notes'],...expenses.map(e=>[e.name,e.amount,e.category,e.type,e.date,e.repeat,e.status,e.notes])];let csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');if(isNative()){try{const P=Capacitor.Plugins;const r=await P.Filesystem.writeFile({path:'expense-buddy.csv',data:csv,directory:'CACHE',encoding:'utf8'});await P.Share.share({title:'Expense Buddy CSV',url:r.uri})}catch(err){toast('Export failed.')}return}
+ let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='expense-buddy.csv';a.click();URL.revokeObjectURL(a.href)};
+$('notifyBtn').onclick=async()=>{if(isNative()){try{const ln=Capacitor.Plugins.LocalNotifications;const p=await ln.requestPermissions();if(p.display==='granted'){await scheduleNative();toast('Reminders on (9 AM)');}else toast('Permission not granted.')}catch(err){toast('Could not enable reminders.')}return}
+ if(!('Notification'in window)){toast('Notifications are not supported in this browser.');return}let p=await Notification.requestPermission();toast(p==='granted'?'Browser notifications enabled.':'Notification permission not granted.');if(p==='granted')checkReminders()};
+function checkReminders(){if(!('Notification'in window)||Notification.permission!=='granted')return;let now=new Date();expenses.filter(e=>e.status!=='Paid').forEach(e=>{let due=new Date(e.date+'T09:00:00');let diff=Math.ceil((due-now)/(86400000));if(diff===e.lead||diff===0){let key='eb-notified-'+e.id+'-'+today();if(!localStorage.getItem(key)){new Notification('Expense Buddy reminder',{body:`${e.name}: ${money(e.amount)} ${diff>0?'due in '+diff+' day(s)':'is due today'}`});localStorage.setItem(key,'1')}}})}
+
+const isNative=()=>!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
+function hashId(str){let h=0;for(let i=0;i<str.length;i++)h=(h*31+str.charCodeAt(i))|0;return Math.abs(h)%2000000000+1}
+async function scheduleNative(){
+ if(!isNative())return;
+ try{
+  const ln=Capacitor.Plugins.LocalNotifications;
+  const perm=await ln.checkPermissions();if(perm.display!=='granted')return;
+  const pend=await ln.getPending();if(pend.notifications.length)await ln.cancel({notifications:pend.notifications});
+  const now=new Date(),list=[];
+  expenses.filter(e=>e.status!=='Paid').forEach(e=>{
+   new Set([e.lead||0,0]).forEach(d=>{
+    const at=new Date(e.date+'T09:00:00');at.setDate(at.getDate()-d);
+    if(at>now)list.push({id:hashId(e.id+'_'+d),title:'Expense Buddy',body:`${e.name}: ${money(e.amount)} ${d>0?'due in '+d+' day(s)':'is due today'}`,schedule:{at,allowWhileIdle:true}});
+   });
+  });
+  if(list.length)await ln.schedule({notifications:list});
+ }catch(err){console.log('schedule error',err)}
+}
+$('date').value=today();render();checkReminders();scheduleNative();setInterval(checkReminders,60000);
+</script>
+</body></html>
