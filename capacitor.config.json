@@ -1,0 +1,6 @@
+{
+  "appId": "com.expensebuddy.app",
+  "appName": "Expense Buddy",
+  "webDir": "www",
+  "android": { "allowMixedContent": false }
+}
